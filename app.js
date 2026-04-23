@@ -1,5 +1,7 @@
 const STORAGE_KEY = "study-archive-records-v2";
 const TAXONOMY_KEY = "study-archive-taxonomy-v2";
+const LEGACY_STORAGE_KEYS = ["study-archive-records-v1"];
+const LEGACY_TAXONOMY_KEYS = ["study-archive-taxonomy-v1"];
 
 const entryForm = document.getElementById("entryForm");
 const template = document.getElementById("entryTemplate");
@@ -341,14 +343,31 @@ async function loadPdfJs() {
 function loadRecords() {
   const bootstrap = loadBootstrapRecords();
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return bootstrap.length ? bootstrap : seedData();
 
-  try {
-    const parsed = JSON.parse(raw);
-    return mergeRecords(bootstrap, Array.isArray(parsed) ? parsed : seedData());
-  } catch {
-    return bootstrap.length ? bootstrap : seedData();
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      return mergeRecords(bootstrap, Array.isArray(parsed) ? parsed : seedData());
+    } catch {
+      return bootstrap.length ? bootstrap : seedData();
+    }
   }
+
+  for (const legacyKey of LEGACY_STORAGE_KEYS) {
+    const legacyRaw = localStorage.getItem(legacyKey);
+    if (!legacyRaw) continue;
+
+    try {
+      const parsed = JSON.parse(legacyRaw);
+      const merged = mergeRecords(bootstrap, Array.isArray(parsed) ? parsed : seedData());
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      return merged;
+    } catch {
+      // ignore broken legacy cache and continue fallback chain
+    }
+  }
+
+  return bootstrap.length ? bootstrap : seedData();
 }
 
 function loadBootstrapRecords() {
@@ -391,18 +410,38 @@ function loadTaxonomy() {
   };
 
   const raw = localStorage.getItem(TAXONOMY_KEY);
-  if (!raw) return defaults;
-
-  try {
-    const parsed = JSON.parse(raw);
-    return {
-      topics: uniqueArray([...(parsed.topics || []), ...defaults.topics]),
-      types: uniqueArray([...(parsed.types || []), ...defaults.types]),
-      tags: uniqueArray([...(parsed.tags || []), ...defaults.tags]),
-    };
-  } catch {
-    return defaults;
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      return {
+        topics: uniqueArray([...(parsed.topics || []), ...defaults.topics]),
+        types: uniqueArray([...(parsed.types || []), ...defaults.types]),
+        tags: uniqueArray([...(parsed.tags || []), ...defaults.tags]),
+      };
+    } catch {
+      return defaults;
+    }
   }
+
+  for (const legacyKey of LEGACY_TAXONOMY_KEYS) {
+    const legacyRaw = localStorage.getItem(legacyKey);
+    if (!legacyRaw) continue;
+
+    try {
+      const parsed = JSON.parse(legacyRaw);
+      const merged = {
+        topics: uniqueArray([...(parsed.topics || []), ...defaults.topics]),
+        types: uniqueArray([...(parsed.types || []), ...defaults.types]),
+        tags: uniqueArray([...(parsed.tags || []), ...defaults.tags]),
+      };
+      localStorage.setItem(TAXONOMY_KEY, JSON.stringify(merged));
+      return merged;
+    } catch {
+      // ignore broken legacy cache and continue fallback chain
+    }
+  }
+
+  return defaults;
 }
 
 function seedData() {
