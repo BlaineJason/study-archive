@@ -1,5 +1,5 @@
-const STORAGE_KEY = "study-archive-records-v1";
-const TAXONOMY_KEY = "study-archive-taxonomy-v1";
+const STORAGE_KEY = "study-archive-records-v2";
+const TAXONOMY_KEY = "study-archive-taxonomy-v2";
 
 const entryForm = document.getElementById("entryForm");
 const template = document.getElementById("entryTemplate");
