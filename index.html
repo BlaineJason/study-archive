@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学习档案馆</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
+  <script defer src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Study Archive</p>
+        <h1>把零散学习记录，整理成一座会自己归档的知识馆。</h1>
+        <p class="hero-text">记录课程、阅读、练习、项目和复盘。系统会按主题、时间和状态自动整理，并把稳定内容收入归档区。</p>
+      </div>
+      <div class="hero-panel">
+        <div class="stat-card">
+          <span>活跃记录</span>
+          <strong id="activeCount">0</strong>
+        </div>
+        <div class="stat-card">
+          <span>已归档</span>
+          <strong id="archiveCount">0</strong>
+        </div>
+        <div class="stat-card accent">
+          <span>最近主题</span>
+          <strong id="topTopic">暂无</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="content-grid">
+      <section class="panel entry-panel">
+        <div class="panel-head">
+          <h2>新增学习记录</h2>
+          <p>每条内容会自动进入整理与归档流程。</p>
+        </div>
+        <form id="entryForm" class="entry-form">
+          <input type="hidden" id="editingRecordId">
+          <label>
+            标题
+            <input type="text" id="title" placeholder="例如：AI 应用案例复盘" required>
+          </label>
+          <div class="split">
+            <label>
+              学习主题
+              <select id="topic" required></select>
+              <div class="inline-entry custom-inline" id="customTopicWrap" hidden>
+                <input type="text" id="customTopicInput" placeholder="输入自定义学习主题">
+                <button type="button" class="ghost-btn" id="addCustomTopicBtn">添加</button>
+              </div>
+            </label>
+            <label>
+              学习类型
+              <select id="type" required></select>
+              <div class="inline-entry custom-inline" id="customTypeWrap" hidden>
+                <input type="text" id="customTypeInput" placeholder="输入自定义学习类型">
+                <button type="button" class="ghost-btn" id="addCustomTypeBtn">添加</button>
+              </div>
+            </label>
+          </div>
+          <div class="split">
+            <label>
+              掌握状态
+              <select id="status">
+                <option value="学习中">学习中</option>
+                <option value="待复习">待复习</option>
+                <option value="已掌握">已掌握</option>
+              </select>
+            </label>
+            <label>
+              学习日期
+              <input type="date" id="studyDate" required>
+            </label>
+          </div>
+          <label>
+            标签
+            <input type="text" id="tags" placeholder="用逗号分隔，例如：基金, 复盘, AI">
+            <select id="tagSelect">
+              <option value="">从下拉菜单添加标签</option>
+            </select>
+            <div class="inline-entry custom-inline" id="customTagWrap" hidden>
+              <input type="text" id="customTagInput" placeholder="输入自定义标签">
+              <button type="button" class="ghost-btn" id="addCustomTagBtn">添加</button>
+            </div>
+          </label>
+          <label>
+            学习内容
+            <textarea id="content" rows="6" placeholder="写下今天学了什么、卡点是什么、下次想继续什么..." required></textarea>
+          </label>
+          <div class="split">
+            <label>
+              自动归档规则
+              <select id="archiveRule">
+                <option value="auto">按状态自动</option>
+                <option value="7">7天无更新归档</option>
+                <option value="14">14天无更新归档</option>
+                <option value="30">30天无更新归档</option>
+                <option value="manual">仅手动归档</option>
+              </select>
+            </label>
+            <label>
+              下次行动
+              <input type="text" id="nextAction" placeholder="例如：周五补充 3 个案例">
+            </label>
+          </div>
+          <div class="toolbar edit-toolbar">
+            <button type="submit" class="primary-btn" id="submitBtn">保存并整理</button>
+            <button type="button" class="ghost-btn" id="cancelEditBtn" hidden>取消编辑</button>
+          </div>
+        </form>
+
+        <div class="file-import-panel">
+          <div class="panel-head compact-head">
+            <h2>从本地文件整理</h2>
+            <p>选择笔记、Markdown、文本、JSON、Word 或 PDF 文件，系统会自动读取并分类。</p>
+          </div>
+          <div class="file-import-options">
+            <label>
+              拆分方式
+              <select id="splitMode">
+                <option value="topic">按主题拆分</option>
+                <option value="date">按日期拆分</option>
+              </select>
+            </label>
+          </div>
+          <div class="file-import-actions">
+            <label class="import-label file-picker">
+              选择本地文件
+              <input id="fileReaderInput" type="file" accept=".txt,.md,.markdown,.json,.csv,.docx,.pdf" multiple>
+            </label>
+            <span class="file-tip">支持 `txt`、`md`、`json`、`csv`、`docx`、`pdf`</span>
+          </div>
+          <div id="fileImportResults" class="file-import-results"></div>
+        </div>
+      </section>
+
+      <section class="panel overview-panel">
+        <div class="panel-head">
+          <h2>整理概览</h2>
+          <p>自动汇总当前学习节奏与重点主题。</p>
+        </div>
+        <div class="overview-cards">
+          <article class="mini-card">
+            <span>今日新增</span>
+            <strong id="todayCount">0</strong>
+          </article>
+          <article class="mini-card">
+            <span>待复习</span>
+            <strong id="reviewCount">0</strong>
+          </article>
+          <article class="mini-card">
+            <span>主题数量</span>
+            <strong id="topicCount">0</strong>
+          </article>
+        </div>
+        <div class="summary-block">
+          <h3>自动整理建议</h3>
+          <ul id="smartSummary"></ul>
+        </div>
+        <div class="summary-block">
+          <h3>主题热度</h3>
+          <div id="topicHeatmap" class="heatmap"></div>
+        </div>
+      </section>
+
+      <section class="panel list-panel">
+        <div class="panel-head row-head">
+          <div>
+            <h2>活跃学习记录</h2>
+            <p>按最近更新时间排序，支持快速归档。</p>
+          </div>
+          <div class="toolbar">
+            <button id="exportBtn" class="ghost-btn" type="button">导出数据</button>
+            <button id="clearActiveBtn" class="ghost-btn" type="button">删除未归档记录</button>
+            <label class="import-label">
+              导入数据
+              <input id="importInput" type="file" accept="application/json">
+            </label>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <label class="search-field">
+            <span>搜索</span>
+            <input id="searchInput" type="search" placeholder="搜索标题、内容、标签、下次行动">
+          </label>
+          <label>
+            <span>主题</span>
+            <select id="topicFilter">
+              <option value="all">全部主题</option>
+            </select>
+          </label>
+          <label>
+            <span>类型</span>
+            <select id="typeFilter">
+              <option value="all">全部类型</option>
+            </select>
+          </label>
+          <label>
+            <span>状态</span>
+            <select id="statusFilter">
+              <option value="all">全部状态</option>
+              <option value="学习中">学习中</option>
+              <option value="待复习">待复习</option>
+              <option value="已掌握">已掌握</option>
+            </select>
+          </label>
+          <label>
+            <span>显示范围</span>
+            <select id="scopeFilter">
+              <option value="all">全部记录</option>
+              <option value="active">仅活跃</option>
+              <option value="archived">仅归档</option>
+            </select>
+          </label>
+          <button id="resetFilters" class="ghost-btn" type="button">清空筛选</button>
+        </div>
+        <div id="activeList" class="card-list"></div>
+      </section>
+
+      <aside class="panel knowledge-panel">
+        <div class="panel-head">
+          <h2>归档目录</h2>
+          <p>按主题浏览归档知识，并跳转到对应内容。</p>
+        </div>
+        <nav id="archiveTopicIndex" class="knowledge-index"></nav>
+      </aside>
+
+      <section class="panel graph-panel">
+        <div class="panel-head">
+          <h2>关键词图谱</h2>
+          <p>根据归档内容中的关键词自动统计出现次数。</p>
+        </div>
+        <div id="knowledgeGraph" class="knowledge-graph"></div>
+      </section>
+
+      <section class="panel archive-panel">
+        <div class="panel-head">
+          <h2>归档区</h2>
+          <p>按主题沉淀稳定内容，并保留月份脉络。</p>
+        </div>
+        <div id="archiveList" class="archive-groups"></div>
+      </section>
+    </main>
+  </div>
+
+  <template id="entryTemplate">
+    <article class="record-card">
+      <div class="record-top">
+        <div>
+          <h3 class="record-title"></h3>
+          <p class="record-meta"></p>
+        </div>
+        <span class="record-status"></span>
+      </div>
+      <p class="record-content"></p>
+      <div class="record-tags"></div>
+      <p class="record-action"></p>
+      <div class="record-actions">
+        <button class="ghost-btn edit-action" type="button">编辑</button>
+        <button class="ghost-btn archive-action" type="button">归档</button>
+        <button class="ghost-btn restore-action" type="button">恢复</button>
+        <button class="ghost-btn delete-action" type="button">删除</button>
+      </div>
+    </article>
+  </template>
+
+  <script src="records-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
