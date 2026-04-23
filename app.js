@@ -516,14 +516,17 @@ function renderArchive(archived) {
 
   const topicGroups = buildArchiveTopicGroups(archived);
   const selection = resolveArchiveSelection(topicGroups, currentArchiveHash());
-  if (!selection) {
-    archivePanel.hidden = true;
-    archiveList.innerHTML = "";
+
+  archivePanel.hidden = false;
+
+  if (selection) {
+    archiveList.appendChild(buildArchiveTopicSection(selection.group, selection.recordId));
     return;
   }
 
-  archivePanel.hidden = false;
-  archiveList.appendChild(buildArchiveTopicSection(selection.group, selection.recordId));
+  topicGroups.forEach((group) => {
+    archiveList.appendChild(buildArchiveTopicSection(group));
+  });
 }
 
 function renderKnowledge(archived) {
@@ -587,7 +590,7 @@ function renderKnowledgeIndex(archived) {
       <h3><a class="directory-topic-link" href="#${escapeHtml(group.topicId)}">${escapeHtml(group.topic)}</a></h3>
       <p class="directory-meta">${group.count} 条归档记录 · 最近更新 ${escapeHtml(group.latestDate)}</p>
       <ul class="directory-records">
-        ${group.records.slice(0, 6).map((record) => `<li><a class="directory-record-link" href="#${escapeHtml(archiveRecordAnchorId(record.id))}">${escapeHtml(record.title)}</a></li>`).join("")}
+        ${group.records.map((record) => `<li><a class="directory-record-link" href="#${escapeHtml(archiveRecordAnchorId(record.id))}">${escapeHtml(record.title)}</a></li>`).join("")}
       </ul>
     `;
     archiveTopicIndex.appendChild(card);
